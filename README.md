@@ -145,13 +145,15 @@ This project is developed for educational and analytical purposes. Predictions a
 
 ## 👨‍💻 Author
 
-**Surendra Kumar Rana**
+**Surendra Kumar Rana**  
+ERP / Student ID: **6605507**  
+Rungta College of Engineering & Technology  
+Department of Computer Science and Engineering
 
-Computer Science & Engineering Student
 
-GitHub: [Your GitHub Profile](https://github.com/)
+GitHub: [GitHub Profile](https://github.com/SurendraRana77)
 
-LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/)
+LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/surendrarana77/)
 
 ---
 
