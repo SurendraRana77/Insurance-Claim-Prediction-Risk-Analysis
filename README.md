@@ -127,56 +127,7 @@ Open your browser and navigate to: **`http://localhost:5000`**
 
 ---
 
-## 5. Render Deployment Instructions (Single-Service)
-
-This repository is designed to deploy to **Render** as a single Web Service without external database or frontend services.
-
-### Step-by-Step Deployment Guide:
-1. **Push to GitHub**:
-   Ensure all files are committed and pushed to your GitHub repository:
-   ```bash
-   git add .
-   git commit -m "Implement complete Insurance Claim Prediction System"
-   git push origin main
-   ```
-2. **Create New Web Service on Render**:
-   - Log into [Render.com](https://render.com).
-   - Click **New +** -> **Web Service**.
-   - Connect your GitHub repository.
-3. **Configure Service Settings**:
-   - **Name**: `insurance-claim-prediction` (or preferred name)
-   - **Region**: Choose the closest region (e.g., Oregon, Frankfurt, Singapore)
-   - **Branch**: `main`
-   - **Root Directory**: Leave blank (root of repository)
-   - **Runtime**: `Python 3`
-   - **Build Command**:
-     ```bash
-     pip install -r requirements.txt && python ml/train.py
-     ```
-   - **Start Command**:
-     ```bash
-     gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
-     ```
-   - **Plan**: `Free`
-4. **Environment Variables**:
-   Add the following environment variables under the **Environment** tab:
-   - `SECRET_KEY`: Set to a strong random string (e.g., `render-prod-insurance-key-2026`).
-   - `FLASK_ENV`: `production`
-5. **Deploy**:
-   - Click **Create Web Service**.
-   - Render will build dependencies, execute model training on the seed dataset, and start the Gunicorn server.
-   - Your live URL will be: `https://<service-name>.onrender.com`.
-
-### Persistence & Ephemeral Filesystem Notes
-- **Render's Free Tier** uses an ephemeral container filesystem. This means SQLite prediction records and user-uploaded CSVs reset when the dyno restarts or redeploys.
-- The application is engineered to handle this gracefully:
-  - The benchmark dataset (`sample_insurance_data.csv`) is bundled in Git.
-  - The SQLite database is automatically initialized on startup via `init_db()`.
-  - For durable multi-month persistence in production, attach a **Render Persistent Disk** and set `DB_PATH=/var/data/insurance_app.db`.
-
----
-
-## 6. Academic Viva & Defense Talking Points
+## 5. Academic Viva & Defense Talking Points
 
 When presenting this project to an examination committee or evaluator:
 
