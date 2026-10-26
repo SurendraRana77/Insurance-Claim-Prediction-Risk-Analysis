@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Model Performance • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Machine Learning Model Diagnostics{% endblock %}
+{% block page_subtitle %}Evaluation metrics, candidate comparisons, ROC curves, and feature importance rankings{% endblock %}
+
+{% block content %}
+{% if not metrics or not model_status or not model_status.is_ready %}
+<div class="clay-card">
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </div>
+        <h4>No Model Artifact Available</h4>
+        <p>No model has been trained yet. Trigger the machine learning training pipeline to train and evaluate candidate models.</p>
+        <form method="POST" action="{{ url_for('analytics.trigger_training') }}" data-prevent-duplicate>
+            <button type="submit" class="clay-btn clay-btn-primary">Train Baseline Models Now</button>
+        </form>
+    </div>
+</div>
+{% else %}
+
+<!-- Retraining Control Bar -->
+<div class="clay-card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">
+                Champion Pipeline: <span style="color: var(--color-accent);">{{ metrics.model_name|replace('_', ' ')|title }}</span>
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">
+                Trained on: {{ metrics.dataset_name }} • Evaluated on 20% held-out test split ({{ metrics.test_samples }} policyholders) • {{ metrics.timestamp[:19] }}
+            </p>
+        </div>
+
+        <form method="POST" action="{{ url_for('analytics.trigger_training') }}" style="display: flex; gap: 0.75rem; align-items: center;" data-prevent-duplicate>
+            <select name="model_type" class="clay-input" style="width: auto; padding: 0.5rem 0.85rem; font-size: 0.85rem;">
+                <option value="auto">Auto-Select (CV Benchmarked on Training Split)</option>
+                <option value="logistic_regression" {% if metrics.model_name == 'logistic_regression' %}selected{% endif %}>Logistic Regression (Interpretable)</option>
+                <option value="random_forest" {% if metrics.model_name == 'random_forest' %}selected{% endif %}>Random Forest (Non-linear)</option>
+            </select>
+            <button type="submit" class="clay-btn clay-btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                Re-Train Model
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Primary Evaluation Metrics Grid -->
+{% set bm = metrics.best_metrics %}
+<div class="grid-cols-4">
+    <!-- ROC-AUC -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>ROC-AUC</h3>
+            <div class="kpi-number" style="color: var(--color-accent);">{{ bm.roc_auc | round(3) }}</div>
+            <div class="kpi-subtext">Discrimination Power</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 12l-4-4-4 4"></path>
+                <path d="M12 16V8"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Claim Recall -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Claim Recall</h3>
+            <div class="kpi-number" style="color: var(--risk-moderate);">{{ (bm.recall * 100) | round(1) }}%</div>
+            <div class="kpi-subtext">Threshold: {{ (bm.decision_threshold * 100)|round(0) }}%</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Brier Calibration Score -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Brier Score</h3>
+            <div class="kpi-number" style="color: var(--risk-low);">{{ bm.brier_score | round(4) }}</div>
+            <div class="kpi-subtext">Calibration (Lower is better)</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Calibration Error -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Mean Pred vs Obs</h3>
+            <div class="kpi-number">{{ (bm.mean_predicted_probability * 100)|round(1) }}%</div>
+            <div class="kpi-subtext">Observed Rate: {{ (bm.observed_claim_rate * 100)|round(1) }}%</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Model Comparison Table -->
+<div class="clay-card" style="margin-bottom: 2rem;">
+    <div class="section-header">
+        <div>
+            <h3>Candidate Model Benchmarking</h3>
+            <p>Empirical evaluation of candidate algorithms on identical held-out test data</p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="clay-table">
+            <thead>
+                <tr>
+                    <th>Candidate Algorithm</th>
+                    <th>Train CV AUC</th>
+                    <th>Test ROC-AUC</th>
+                    <th>Brier Score</th>
+                    <th>Mean Pred Prob</th>
+                    <th>Obs Claim Rate</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th>Selection Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, cand in metrics.candidate_comparison.items() %}
+                <tr>
+                    <td><strong>{{ name|replace('_', ' ')|title }}</strong></td>
+                    <td><code>{{ cand.train_cv_roc_auc | default('N/A') }}</code></td>
+                    <td><strong>{{ cand.roc_auc | round(3) }}</strong></td>
+                    <td>{{ cand.brier_score | round(4) }}</td>
+                    <td>{{ (cand.mean_predicted_probability * 100)|round(1) }}%</td>
+                    <td>{{ (cand.observed_claim_rate * 100)|round(1) }}%</td>
+                    <td>{{ (cand.recall * 100) | round(1) }}%</td>
+                    <td>{{ cand.f1_score | round(3) }}</td>
+                    <td>
+                        {% if name == metrics.model_name %}
+                            <span class="risk-pill risk-low" style="font-size: 0.75rem;">Selected Champion</span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Evaluated Baseline</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="margin-top: 1rem; font-size: 0.82rem; color: var(--text-muted);">
+        <strong>Calibration & Selection Methodology:</strong> Candidate models are benchmarked via 5-fold Stratified Cross-Validation strictly on the 80% training split. Probability calibration is fitted using Platt Sigmoid scaling within cross-validation folds. The held-out 20% test split is evaluated only once to confirm discrimination (ROC-AUC) and probability calibration (Brier score).
+    </div>
+</div>
+
+<!-- Diagnostics Grid: ROC Curve & Confusion Matrix -->
+<div class="grid-cols-2">
+    <!-- ROC Curve -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Receiver Operating Characteristic (ROC)</h3>
+                <p>True Positive Rate vs. False Positive Rate (AUC: {{ bm.roc_auc | round(3) }})</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="rocChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Confusion Matrix -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Confusion Matrix</h3>
+                <p>Test sample classifications (n = {{ bm.test_samples }})</p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+            <!-- True Negatives -->
+            <div class="clay-card-inset" style="text-align: center; border-left: 4px solid var(--risk-low);">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">True Negatives (TN)</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--risk-low); margin: 0.25rem 0;">{{ bm.confusion_matrix.tn }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Actual No Claim • Correctly Identified</div>
+            </div>
+
+            <!-- False Positives -->
+            <div class="clay-card-inset" style="text-align: center; border-left: 4px solid var(--risk-moderate);">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">False Positives (FP)</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--risk-moderate); margin: 0.25rem 0;">{{ bm.confusion_matrix.fp }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Actual No Claim • Flagged as Risk</div>
+            </div>
+
+            <!-- False Negatives -->
+            <div class="clay-card-inset" style="text-align: center; border-left: 4px solid var(--risk-high);">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">False Negatives (FN)</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--risk-high); margin: 0.25rem 0;">{{ bm.confusion_matrix.fn }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Actual Claim • Missed by Model</div>
+            </div>
+
+            <!-- True Positives -->
+            <div class="clay-card-inset" style="text-align: center; border-left: 4px solid var(--color-accent);">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">True Positives (TP)</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--color-accent); margin: 0.25rem 0;">{{ bm.confusion_matrix.tp }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Actual Claim • Successfully Detected</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature Importance / Weights Table -->
+<div class="clay-card">
+    <div class="section-header">
+        <div>
+            <h3>Global Predictive Feature Rankings</h3>
+            <p>Importance weights derived from the trained pipeline</p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="clay-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Model Weight / Importance</th>
+                    <th>Risk Direction</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in bm.feature_importances %}
+                <tr>
+                    <td><strong>{{ f.feature|replace('_', ' ')|title }}</strong></td>
+                    <td><code>{{ f.weight }}</code></td>
+                    <td>
+                        {% if f.direction == 'Increases Risk' %}
+                            <span class="risk-pill risk-high" style="font-size: 0.75rem;">Increases Probability</span>
+                        {% elif f.direction == 'Decreases Risk' %}
+                            <span class="risk-pill risk-low" style="font-size: 0.75rem;">Decreases Probability</span>
+                        {% else %}
+                            <span class="risk-pill risk-moderate" style="font-size: 0.75rem;">{{ f.direction }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    {% if metrics and metrics.best_metrics and metrics.best_metrics.roc_curve %}
+    const rocPoints = {{ metrics.best_metrics.roc_curve | tojson }};
+    
+    renderSafeChart('rocChart', {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'ROC Curve',
+                    data: rocPoints,
+                    borderColor: '#4F46E5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 2
+                },
+                {
+                    label: 'Random Chance Baseline',
+                    data: [{x: 0, y: 0}, {x: 1, y: 1}],
+                    borderColor: '#94A3B8',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'False Positive Rate' } },
+                y: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'True Positive Rate' } }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

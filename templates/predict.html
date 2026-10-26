@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Claim Prediction • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Policyholder Risk Assessment{% endblock %}
+{% block page_subtitle %}Evaluate individual insurance claim probability and risk categorization{% endblock %}
+
+{% block content %}
+{% if not model_status or not model_status.is_ready %}
+<div class="clay-card">
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <h4>Model Pipeline Not Initialized</h4>
+        <p>No trained machine learning model was found. Please train a model using the active dataset before generating individual predictions.</p>
+        <a href="{{ url_for('analytics.model_performance_view') }}" class="clay-btn clay-btn-primary">Train Baseline Model</a>
+    </div>
+</div>
+{% else %}
+
+<div class="grid-cols-2-1">
+    <!-- Left Column: Input Form -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Policyholder Characteristics</h3>
+                <p>Input data matching model schema ({{ model_status.model_name|replace('_', ' ')|title }})</p>
+            </div>
+            <button type="button" id="btn-fill-sample" class="clay-btn clay-btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.8rem;">
+                Fill High-Risk Sample
+            </button>
+        </div>
+
+        <form id="prediction-form" method="POST" action="{{ url_for('predictions.predict_view') }}" data-prevent-duplicate>
+            <!-- 1. Driver Demographics -->
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(200,215,230,0.5); padding-bottom: 0.35rem;">
+                1. Driver Profile
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="form-group">
+                    <label class="form-label" for="field_age">Driver Age (Years)</label>
+                    <input type="number" id="field_age" name="age" class="clay-input" min="18" max="85" value="35" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_driving_experience">Driving Experience (Years)</label>
+                    <input type="number" id="field_driving_experience" name="driving_experience" class="clay-input" min="0" max="65" value="12" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_credit_score">Normalized Credit Score (0.0 – 1.0)</label>
+                    <input type="number" id="field_credit_score" name="credit_score" class="clay-input" min="0.0" max="1.0" step="0.01" value="0.65" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_gender">Gender</label>
+                    <select id="field_gender" name="gender" class="clay-input">
+                        <option value="male">Male</option>
+                        <option value="female" selected>Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_income_level">Income Bracket</label>
+                    <select id="field_income_level" name="income_level" class="clay-input">
+                        <option value="low">Low</option>
+                        <option value="middle" selected>Middle</option>
+                        <option value="high">High</option>
+                        <option value="very_high">Very High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_education">Education Level</label>
+                    <select id="field_education" name="education" class="clay-input">
+                        <option value="high_school">High School</option>
+                        <option value="bachelors" selected>Bachelor's Degree</option>
+                        <option value="advanced">Advanced Degree</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. Vehicle Profile -->
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(200,215,230,0.5); padding-bottom: 0.35rem;">
+                2. Vehicle Characteristics
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="form-group">
+                    <label class="form-label" for="field_vehicle_year">Vehicle Model Year</label>
+                    <select id="field_vehicle_year" name="vehicle_year" class="clay-input">
+                        <option value="after_2015" selected>2015 or Newer</option>
+                        <option value="before_2015">Before 2015</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_vehicle_type">Vehicle Body Type</label>
+                    <select id="field_vehicle_type" name="vehicle_type" class="clay-input">
+                        <option value="sedan" selected>Sedan</option>
+                        <option value="suv">SUV</option>
+                        <option value="compact">Compact</option>
+                        <option value="sports_car">Sports Car</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_vehicle_ownership">Vehicle Ownership</label>
+                    <select id="field_vehicle_ownership" name="vehicle_ownership" class="clay-input">
+                        <option value="1" selected>Owned</option>
+                        <option value="0">Leased / Financed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_annual_mileage">Estimated Annual Mileage</label>
+                    <input type="number" id="field_annual_mileage" name="annual_mileage" class="clay-input" min="1000" max="60000" step="500" value="12000" required>
+                </div>
+            </div>
+
+            <!-- 3. Driving Violations & Incidents -->
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(200,215,230,0.5); padding-bottom: 0.35rem;">
+                3. Driving History (Past 3 Years)
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label class="form-label" for="field_speeding_violations">Speeding Citations</label>
+                    <input type="number" id="field_speeding_violations" name="speeding_violations" class="clay-input" min="0" max="20" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_duis">DUI Incidents</label>
+                    <input type="number" id="field_duis" name="duis" class="clay-input" min="0" max="10" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="field_past_accidents">Past Accidents</label>
+                    <input type="number" id="field_past_accidents" name="past_accidents" class="clay-input" min="0" max="15" value="0" required>
+                </div>
+            </div>
+
+            <!-- Threshold & Notes -->
+            <div class="clay-card-inset" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label class="form-label" for="field_threshold" style="margin-bottom: 0;">
+                        Classification Decision Threshold: <strong id="threshold-display">30%</strong>
+                    </label>
+                </div>
+                <input type="range" id="field_threshold" name="custom_threshold" class="clay-range" min="0.05" max="0.95" step="0.05" value="0.30" data-output="threshold-display" data-format="percent">
+                <p class="form-hint">
+                    Calibrated baseline is 30% (matching empirical ~23% portfolio claim prevalence). Adjusting this boundary alters classification without retraining the pipeline.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="field_notes">Underwriting / Audit Notes (Optional)</label>
+                <input type="text" id="field_notes" name="notes" class="clay-input" placeholder="e.g., Renewal inspection, Preferred customer review">
+            </div>
+
+            <button type="submit" id="btn-predict-submit" class="clay-btn clay-btn-primary" style="width: 100%; padding: 0.9rem;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span>Calculate Claim Likelihood</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Right Column: Interactive Scorecard -->
+    <div class="clay-card" id="scorecard-container">
+        <div class="section-header">
+            <div>
+                <h3>Risk Scorecard</h3>
+                <p>Model inference output</p>
+            </div>
+            <span id="scorecard-model-badge" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+                {{ model_status.model_name|replace('_', ' ')|title }}
+            </span>
+        </div>
+
+        <div id="scorecard-content">
+            {% if prediction_result %}
+            <!-- Initial Server-Rendered Result -->
+            <div class="scorecard-meter">
+                <div class="scorecard-prob-value" style="color: var(--color-primary);">
+                    {{ prediction_result.probability_percent }}%
+                </div>
+                <div class="scorecard-label">Predicted Claim Probability</div>
+                
+                <div>
+                    <span class="risk-pill {{ prediction_result.risk_css }}" style="font-size: 1rem; padding: 0.5rem 1.25rem;">
+                        {{ prediction_result.risk_tier }}
+                    </span>
+                </div>
+                <div style="margin-top: 0.4rem;">
+                    <span style="font-size: 0.72rem; color: var(--text-muted); background: var(--clay-surface-inset); padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid rgba(200,215,230,0.5);">Synthetic Benchmark Model</span>
+                </div>
+            </div>
+
+            <div class="clay-card-inset" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem; font-size: 0.85rem;">
+                    <span style="color: var(--text-muted);">Decision Outcome:</span>
+                    <strong>{{ prediction_result.classification_label }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                    <span style="color: var(--text-muted);">Threshold Applied:</span>
+                    <span>{{ (prediction_result.decision_threshold * 100) | round(0) }}%</span>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4;">
+                    {{ prediction_result.risk_guidance }}
+                </p>
+            </div>
+
+            {% if prediction_result.explanations %}
+            <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+                Primary Predictive Factors
+            </h4>
+            <ul class="factors-list">
+                {% for f in prediction_result.explanations %}
+                <li class="factor-item">
+                    <span class="factor-name">{{ f.factor|replace('_', ' ')|title }}</span>
+                    <span class="factor-badge {{ f.direction }}">{{ f.impact }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% else %}
+            <!-- Default Placeholder State before submission -->
+            <div class="empty-state" style="padding: 3rem 1rem;">
+                <div class="empty-state-icon">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 14 14"></polyline>
+                    </svg>
+                </div>
+                <h4>Ready for Evaluation</h4>
+                <p>Fill out the policyholder characteristics on the left and click <strong>Calculate Claim Likelihood</strong> to view probability and risk categorization.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(200, 215, 230, 0.5); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+            <strong>Demonstration Prototype Notice:</strong> Model was trained on synthetic benchmark insurance data. Estimates claim occurrence likelihood; does not calculate loss severity or fraud probability, and must not be used as the sole basis for real insurance underwriting.
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // High-Risk Sample Fill Button
+    const sampleBtn = document.getElementById('btn-fill-sample');
+    if (sampleBtn) {
+        sampleBtn.addEventListener('click', () => {
+            document.getElementById('field_age').value = 21;
+            document.getElementById('field_driving_experience').value = 1;
+            document.getElementById('field_credit_score').value = 0.32;
+            document.getElementById('field_vehicle_year').value = 'before_2015';
+            document.getElementById('field_vehicle_type').value = 'sports_car';
+            document.getElementById('field_vehicle_ownership').value = '0';
+            document.getElementById('field_annual_mileage').value = 24000;
+            document.getElementById('field_speeding_violations').value = 3;
+            document.getElementById('field_duis').value = 1;
+            document.getElementById('field_past_accidents').value = 2;
+            document.getElementById('field_income_level').value = 'low';
+            showToast('Loaded illustrative elevated-risk profile sample.', 'info');
+        });
+    }
+
+    // Dynamic AJAX Form Submission
+    const form = document.getElementById('prediction-form');
+    const scorecardContent = document.getElementById('scorecard-content');
+    
+    if (form && scorecardContent) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btn-predict-submit');
+            const originalBtnHtml = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Evaluating Risk Pipeline...';
+            
+            const formData = new FormData(form);
+            const dataObj = {};
+            formData.forEach((value, key) => { dataObj[key] = value; });
+
+            try {
+                const response = await fetch("{{ url_for('predictions.api_predict') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataObj)
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    showToast(data.error || 'Failed to calculate prediction.', 'danger');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                    return;
+                }
+
+                const res = data.result;
+                
+                // Build dynamic scorecard HTML
+                let factorsHtml = '';
+                if (res.explanations && res.explanations.length > 0) {
+                    factorsHtml = `
+                        <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-top: 1rem;">
+                            Primary Predictive Factors
+                        </h4>
+                        <ul class="factors-list">
+                            ${res.explanations.map(f => `
+                                <li class="factor-item">
+                                    <span class="factor-name">${f.factor.replace(/_/g, ' ').toUpperCase()}</span>
+                                    <span class="factor-badge ${f.direction}">${f.impact}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                }
+
+                scorecardContent.innerHTML = `
+                    <div class="scorecard-meter">
+                        <div class="scorecard-prob-value" style="color: var(--color-primary);">
+                            ${res.probability_percent}%
+                        </div>
+                        <div class="scorecard-label">Predicted Claim Probability</div>
+                        
+                        <div>
+                            <span class="risk-pill ${res.risk_css}" style="font-size: 1rem; padding: 0.5rem 1.25rem;">
+                                ${res.risk_tier}
+                            </span>
+                        </div>
+                        <div style="margin-top: 0.4rem;">
+                            <span style="font-size: 0.72rem; color: var(--text-muted); background: var(--clay-surface-inset); padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid rgba(200,215,230,0.5);">Synthetic Benchmark Model</span>
+                        </div>
+                    </div>
+
+                    <div class="clay-card-inset" style="margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem; font-size: 0.85rem;">
+                            <span style="color: var(--text-muted);">Decision Outcome:</span>
+                            <strong style="color: ${res.classification_result === 1 ? 'var(--risk-high)' : 'var(--risk-low)'};">
+                                ${res.classification_label}
+                            </strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span style="color: var(--text-muted);">Threshold Applied:</span>
+                            <span>${Math.round(res.decision_threshold * 100)}%</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4;">
+                            ${res.risk_guidance}
+                        </p>
+                    </div>
+
+                    ${factorsHtml}
+                `;
+
+                showToast(`Inference logged to audit trail (ID #${res.id})`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Network error while processing prediction.', 'danger');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

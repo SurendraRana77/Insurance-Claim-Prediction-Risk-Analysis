@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Executive Analytics Dashboard{% endblock %}
+{% block page_subtitle %}Overview of underwriting risk metrics, dataset posture, and prediction distributions{% endblock %}
+
+{% block content %}
+<!-- Synthetic Data Notice (if applicable) -->
+{% if dataset_summary and dataset_summary.is_synthetic %}
+<div class="clay-alert clay-alert-info">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+    <div>
+        <strong>Demonstration Benchmark Dataset Active:</strong> The application is currently operating on the 
+        calibrated 10,000-record automotive insurance benchmark (<code>sample_insurance_data.csv</code>). 
+        You can upload a custom insurance CSV at any time via the <a href="{{ url_for('data_bp.dataset_view') }}" style="color: inherit; font-weight: 700; text-decoration: underline;">Dataset Explorer</a>.
+    </div>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="grid-cols-4">
+    <!-- Card 1: Records -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Active Dataset Records</h3>
+            <div class="kpi-number">{{ dataset_summary.total_rows | default(0) }}</div>
+            <div class="kpi-subtext">{{ dataset_summary.filename | default('No dataset') }}</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Card 2: Historical Claim Rate -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Benchmark Claim Rate</h3>
+            {% if dataset_summary.target_info and dataset_summary.target_info.exists %}
+            <div class="kpi-number">{{ (dataset_summary.target_info.claim_rate * 100) | round(1) }}%</div>
+            <div class="kpi-subtext">{{ dataset_summary.target_info.positive_count }} observed claims</div>
+            {% else %}
+            <div class="kpi-number">N/A</div>
+            <div class="kpi-subtext">Target column unconfigured</div>
+            {% endif %}
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Card 3: Model Performance (ROC-AUC) -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Model Discrimination</h3>
+            {% if model_status and model_status.is_ready and model_status.roc_auc %}
+            <div class="kpi-number">{{ model_status.roc_auc | round(3) }}</div>
+            <div class="kpi-subtext">ROC-AUC ({{ model_status.model_name|replace('_', ' ')|title }})</div>
+            {% elif model_status and model_status.is_ready %}
+            <div class="kpi-number">{{ (model_status.accuracy * 100) | round(1) }}%</div>
+            <div class="kpi-subtext">Accuracy</div>
+            {% else %}
+            <div class="kpi-number">N/A</div>
+            <div class="kpi-subtext">Model needs training</div>
+            {% endif %}
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 12l-4-4-4 4"></path>
+                <path d="M12 16V8"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Card 4: Predictions Generated -->
+    <div class="clay-card kpi-card">
+        <div class="kpi-content">
+            <h3>Inference History</h3>
+            <div class="kpi-number">{{ total_predictions | default(0) }}</div>
+            <div class="kpi-subtext">Logged in audit trail</div>
+        </div>
+        <div class="kpi-icon-pill">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<!-- Visualization Row -->
+<div class="grid-cols-2">
+    <!-- Chart 1: Historical Class Distribution -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Historical Claim Frequency</h3>
+                <p>Distribution of claims in active dataset</p>
+            </div>
+        </div>
+        {% if dataset_summary.target_info and dataset_summary.target_info.exists %}
+        <div style="height: 260px; position: relative;">
+            <canvas id="claimDistChart"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h4>No Target Configured</h4>
+            <p>Target variable distribution is unavailable until a target column is specified.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chart 2: Prediction Portfolio Risk Tiers -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Prediction Risk Tiers</h3>
+                <p>Categorization of historical inferences</p>
+            </div>
+        </div>
+        {% if risk_distribution and total_predictions > 0 %}
+        <div style="height: 260px; position: relative;">
+            <canvas id="riskDistChart"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 2rem 1rem;">
+            <div class="empty-state-icon">
+                <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+            </div>
+            <h4>No Inferences Yet</h4>
+            <p>Generate predictions to visualize the risk tier breakdown of your portfolio.</p>
+            <a href="{{ url_for('predictions.predict_view') }}" class="clay-btn clay-btn-primary">Generate First Prediction</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Predictions Table -->
+<div class="clay-card">
+    <div class="section-header">
+        <div>
+            <h3>Recent Policyholder Inferences</h3>
+            <p>Most recent records saved to SQLite audit log</p>
+        </div>
+        {% if recent_predictions %}
+        <a href="{{ url_for('predictions.history_view') }}" class="clay-btn clay-btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 1rem;">View All History</a>
+        {% endif %}
+    </div>
+
+    {% if recent_predictions %}
+    <div class="table-responsive">
+        <table class="clay-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Timestamp</th>
+                    <th>Driver Profile</th>
+                    <th>Vehicle</th>
+                    <th>Violations / Accidents</th>
+                    <th>Probability</th>
+                    <th>Risk Category</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in recent_predictions %}
+                <tr>
+                    <td><strong>#{{ p.id }}</strong></td>
+                    <td style="color: var(--text-muted); font-size: 0.82rem;">{{ p.timestamp }}</td>
+                    <td>Age: {{ p.customer_age }} • Exp: {{ p.driving_experience }}y</td>
+                    <td>{{ p.vehicle_type|title }} ({{ p.vehicle_year }})</td>
+                    <td>Speed: {{ p.speeding_violations }} • Acc: {{ p.past_accidents }}</td>
+                    <td><strong>{{ (p.predicted_probability * 100) | round(1) }}%</strong></td>
+                    <td>
+                        <span class="risk-pill {{ p.risk_category|lower|replace(' ', '-') }}">
+                            {{ p.risk_category }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if p.classification_result == 1 %}
+                            <span style="color: var(--risk-high); font-weight: 700;">Claim Expected</span>
+                        {% else %}
+                            <span style="color: var(--risk-low); font-weight: 700;">No Claim</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <h4>Audit Log is Empty</h4>
+        <p>No policyholder risk assessments have been generated yet. Use the prediction workspace to evaluate underwriting profiles.</p>
+        <a href="{{ url_for('predictions.predict_view') }}" class="clay-btn clay-btn-primary">Evaluate a Policyholder</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Claim Distribution Chart
+    {% if dataset_summary.target_info and dataset_summary.target_info.exists %}
+    const targetData = {{ dataset_summary.target_info.counts | tojson }};
+    const labels = Object.keys(targetData).map(k => k === '1' ? 'Claim Filed' : 'No Claim Filed');
+    const values = Object.values(targetData);
+    
+    renderSafeChart('claimDistChart', {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: ['#22C55E', '#EF4444'],
+                borderWidth: 2,
+                borderColor: '#FFFFFF'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    {% endif %}
+
+    // 2. Risk Portfolio Distribution Chart
+    {% if risk_distribution and total_predictions > 0 %}
+    const riskData = {{ risk_distribution | tojson }};
+    const riskLabels = ['Low Risk', 'Moderate Risk', 'Elevated Risk', 'High Risk'];
+    const riskCounts = riskLabels.map(l => riskData[l] || 0);
+    
+    renderSafeChart('riskDistChart', {
+        type: 'bar',
+        data: {
+            labels: riskLabels,
+            datasets: [{
+                label: 'Inference Count',
+                data: riskCounts,
+                backgroundColor: ['#22C55E', '#F59E0B', '#F97316', '#EF4444'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

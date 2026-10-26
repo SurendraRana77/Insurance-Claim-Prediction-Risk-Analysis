@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Inference Audit Trail{% endblock %}
+{% block page_subtitle %}Searchable SQLite record of all generated policyholder risk assessments{% endblock %}
+
+{% block content %}
+<!-- Search & Filter Bar -->
+<div class="clay-card" style="margin-bottom: 2rem;">
+    <form method="GET" action="{{ url_for('predictions.history_view') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="flex: 2; min-width: 200px; margin-bottom: 0;">
+            <label class="form-label" for="search_input">Search Predictions</label>
+            <input type="text" id="search_input" name="search" class="clay-input" placeholder="Search by notes or policyholder profile..." value="{{ search | default('') }}">
+        </div>
+
+        <div class="form-group" style="flex: 1; min-width: 160px; margin-bottom: 0;">
+            <label class="form-label" for="risk_filter">Filter by Risk Tier</label>
+            <select id="risk_filter" name="risk_filter" class="clay-input">
+                <option value="all" {% if not risk_filter or risk_filter == 'all' %}selected{% endif %}>All Risk Categories</option>
+                <option value="Low Risk" {% if risk_filter == 'Low Risk' %}selected{% endif %}>Low Risk</option>
+                <option value="Moderate Risk" {% if risk_filter == 'Moderate Risk' %}selected{% endif %}>Moderate Risk</option>
+                <option value="Elevated Risk" {% if risk_filter == 'Elevated Risk' %}selected{% endif %}>Elevated Risk</option>
+                <option value="High Risk" {% if risk_filter == 'High Risk' %}selected{% endif %}>High Risk</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="clay-btn clay-btn-primary" style="height: 44px; padding: 0 1.25rem;">
+                Apply Filter
+            </button>
+            <a href="{{ url_for('predictions.history_view') }}" class="clay-btn clay-btn-secondary" style="height: 44px; padding: 0 1rem;">
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- History Table -->
+<div class="clay-card">
+    <div class="section-header">
+        <div>
+            <h3>Audit Log ({{ predictions|length }} Records Displayed)</h3>
+            <p>Immutable SQLite record of evaluated risk inputs and outputs</p>
+        </div>
+    </div>
+
+    {% if predictions %}
+    <div class="table-responsive">
+        <table class="clay-table">
+            <thead>
+                <tr>
+                    <th>Audit ID</th>
+                    <th>Timestamp</th>
+                    <th>Model Version</th>
+                    <th>Driver Characteristics</th>
+                    <th>Vehicle Details</th>
+                    <th>Violations / Acc</th>
+                    <th>Probability</th>
+                    <th>Risk Category</th>
+                    <th>Threshold</th>
+                    <th>Audit Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in predictions %}
+                <tr>
+                    <td><strong>#{{ p.id }}</strong></td>
+                    <td style="color: var(--text-muted); font-size: 0.8rem; white-space: nowrap;">{{ p.timestamp }}</td>
+                    <td style="font-family: monospace; font-size: 0.75rem;">{{ p.model_version }}</td>
+                    <td style="font-size: 0.85rem;">
+                        Age: {{ p.customer_age }} • Exp: {{ p.driving_experience }}y • Credit: {{ p.credit_score }}
+                    </td>
+                    <td style="font-size: 0.85rem;">
+                        {{ p.vehicle_type|title }} ({{ p.vehicle_year }}) • {{ p.annual_mileage }} mi
+                    </td>
+                    <td style="font-size: 0.85rem;">
+                        Speed: {{ p.speeding_violations }} • DUI: {{ p.duis }} • Acc: {{ p.past_accidents }}
+                    </td>
+                    <td>
+                        <strong style="font-size: 1rem; color: var(--color-primary);">{{ (p.predicted_probability * 100) | round(1) }}%</strong>
+                    </td>
+                    <td>
+                        <span class="risk-pill {{ p.risk_category|lower|replace(' ', '-') }}" style="font-size: 0.75rem;">
+                            {{ p.risk_category }}
+                        </span>
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-muted);">
+                        {{ (p.decision_threshold * 100) | round(0) }}%
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{ p.notes or '-' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <h4>No Matching Inferences Found</h4>
+        <p>No historical prediction records match your query or filter parameters.</p>
+        <a href="{{ url_for('predictions.predict_view') }}" class="clay-btn clay-btn-primary">Generate a Prediction</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

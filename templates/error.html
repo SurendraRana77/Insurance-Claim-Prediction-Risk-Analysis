@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ error_code }} • Insurance Claim Prediction{% endblock %}
+{% block page_title %}{{ error_title }}{% endblock %}
+{% block page_subtitle %}{{ error_subtitle }}{% endblock %}
+
+{% block content %}
+<div class="clay-card empty-state" style="max-width: 600px; margin: 2rem auto; text-align: center;">
+    <div class="empty-state-icon" style="font-size: 1.5rem; font-weight: 800; color: var(--color-primary); width: 72px; height: 72px; margin: 0 auto 1.5rem;">
+        {{ error_code }}
+    </div>
+    <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-main);">
+        {{ error_title }}
+    </h3>
+    <p style="font-size: 0.92rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.75rem;">
+        {{ error_message }}
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('dashboard.index') }}" class="clay-btn clay-btn-primary">
+            Return to Dashboard
+        </a>
+        <a href="{{ url_for('data_bp.dataset_view') }}" class="clay-btn clay-btn-secondary">
+            Dataset Explorer
+        </a>
+    </div>
+</div>
+{% endblock %}

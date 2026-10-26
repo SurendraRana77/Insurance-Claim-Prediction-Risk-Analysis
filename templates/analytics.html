@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Analytics • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Underwriting Risk Analytics{% endblock %}
+{% block page_subtitle %}Exploratory data analysis of historical claim incidence across policyholder cohorts{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Notice -->
+<div class="clay-alert clay-alert-info">
+    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+    <div>
+        <strong>Statistical Association vs. Causation:</strong> The distributions below describe empirical claim 
+        frequencies within the active dataset. Observed correlations do not establish direct causality or justify discriminatory 
+        adverse actions on sensitive policyholder attributes.
+    </div>
+</div>
+
+<!-- 2x2 Analytics Grid -->
+<div class="grid-cols-2">
+    <!-- Chart 1: Claim Rate by Driving Experience -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Claim Rate by Driving Experience</h3>
+                <p>Empirical claim rate across experience cohorts</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="expChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Claim Rate by Past Accidents -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Claim Rate by Past Accidents</h3>
+                <p>Claim frequency vs recorded accidents in past 3 years</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="accChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 3: Claim Rate by Vehicle Type -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Claim Rate by Vehicle Body Type</h3>
+                <p>Observed risk variations across vehicle styles</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="vehChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 4: Claim Rate by Credit Score Quartiles -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>Claim Rate by Credit Score Tier</h3>
+                <p>Financial risk indicators vs observed claim filing</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="creditChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Threshold Configuration Card -->
+<div class="clay-card">
+    <div class="section-header">
+        <div>
+            <h3>Application Risk Tier Boundaries</h3>
+            <p>Configurable cutoff thresholds for categorizing predicted probabilities</p>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('analytics.update_risk_thresholds') }}" style="display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 1.25rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="thresh_low">Low Risk Upper Bound (p < x)</label>
+            <input type="number" id="thresh_low" name="risk_threshold_low" class="clay-input" min="0.01" max="0.50" step="0.01" value="{{ risk_thresholds.low }}" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="thresh_mod">Moderate Risk Upper Bound</label>
+            <input type="number" id="thresh_mod" name="risk_threshold_moderate" class="clay-input" min="0.05" max="0.75" step="0.01" value="{{ risk_thresholds.moderate }}" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="thresh_elev">Elevated Risk Upper Bound</label>
+            <input type="number" id="thresh_elev" name="risk_threshold_elevated" class="clay-input" min="0.10" max="0.99" step="0.01" value="{{ risk_thresholds.elevated }}" required>
+        </div>
+        <button type="submit" class="clay-btn clay-btn-primary" style="height: 44px;">
+            Save Thresholds
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const analyticsData = {{ eda_data | tojson }};
+
+    // 1. Driving Experience Chart
+    if (analyticsData.experience) {
+        renderSafeChart('expChart', {
+            type: 'bar',
+            data: {
+                labels: analyticsData.experience.labels,
+                datasets: [{
+                    label: 'Claim Frequency (%)',
+                    data: analyticsData.experience.rates,
+                    backgroundColor: '#4F46E5',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // 2. Past Accidents Chart
+    if (analyticsData.accidents) {
+        renderSafeChart('accChart', {
+            type: 'bar',
+            data: {
+                labels: analyticsData.accidents.labels,
+                datasets: [{
+                    label: 'Claim Frequency (%)',
+                    data: analyticsData.accidents.rates,
+                    backgroundColor: '#EF4444',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // 3. Vehicle Type Chart
+    if (analyticsData.vehicle_type) {
+        renderSafeChart('vehChart', {
+            type: 'bar',
+            data: {
+                labels: analyticsData.vehicle_type.labels.map(l => l.toUpperCase()),
+                datasets: [{
+                    label: 'Claim Frequency (%)',
+                    data: analyticsData.vehicle_type.rates,
+                    backgroundColor: '#F59E0B',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // 4. Credit Score Quartiles
+    if (analyticsData.credit_score) {
+        renderSafeChart('creditChart', {
+            type: 'bar',
+            data: {
+                labels: analyticsData.credit_score.labels,
+                datasets: [{
+                    label: 'Claim Frequency (%)',
+                    data: analyticsData.credit_score.rates,
+                    backgroundColor: '#10B981',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

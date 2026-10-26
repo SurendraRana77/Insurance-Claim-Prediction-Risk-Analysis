@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Insurance Claim Prediction & Risk Analysis{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/claymorphism.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js from CDN with local graceful fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <div class="brand-section">
+                <div class="brand-logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h1>InsurAnalytics</h1>
+                    <p>Claim Risk & Decision Support</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+                        <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+                        <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+                        <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{{ url_for('predictions.predict_view') }}" class="nav-item {% if request.endpoint == 'predictions.predict_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Claim Prediction</span>
+                </a>
+
+                <a href="{{ url_for('data_bp.dataset_view') }}" class="nav-item {% if request.endpoint == 'data_bp.dataset_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                    <span>Dataset Explorer</span>
+                </a>
+
+                <a href="{{ url_for('analytics.risk_analytics_view') }}" class="nav-item {% if request.endpoint == 'analytics.risk_analytics_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    <span>Risk Analytics</span>
+                </a>
+
+                <a href="{{ url_for('analytics.model_performance_view') }}" class="nav-item {% if request.endpoint == 'analytics.model_performance_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Model Performance</span>
+                </a>
+
+                <a href="{{ url_for('predictions.history_view') }}" class="nav-item {% if request.endpoint == 'predictions.history_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 14 14"></polyline>
+                    </svg>
+                    <span>Prediction History</span>
+                </a>
+
+                <a href="{{ url_for('dashboard.about_view') }}" class="nav-item {% if request.endpoint == 'dashboard.about_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span>About Project</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status-badge">
+                    {% if g_model_status and g_model_status.is_ready %}
+                        <span class="status-dot"></span>
+                        <span>Model Active: {{ g_model_status.model_name|replace('_', ' ')|title }}</span>
+                    {% else %}
+                        <span class="status-dot inactive"></span>
+                        <span>Model: Needs Training</span>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="app-main">
+            <!-- Header Bar -->
+            <header class="app-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button id="sidebar-toggle" class="sidebar-toggle-btn" aria-label="Toggle Navigation">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="header-title-block">
+                        <h2>{% block page_title %}Dashboard{% endblock %}</h2>
+                        <p>{% block page_subtitle %}Real-time policyholder analytics & risk evaluation{% endblock %}</p>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <a href="{{ url_for('predictions.predict_view') }}" class="clay-btn clay-btn-primary" style="padding: 0.5rem 1.1rem; font-size: 0.85rem;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>New Prediction</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Content Injection -->
+            <div class="content-wrapper">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="clay-alert clay-alert-{{ category }}">
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Footer with Academic Disclaimers -->
+            <footer class="app-footer">
+                <p>
+                    <strong>Academic Decision-Support Prototype</strong> • Insurance Claim Prediction & Risk Analysis System
+                </p>
+                <p style="margin-top: 0.25rem; font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; max-width: 900px; margin-left: auto; margin-right: auto;">
+                    Demonstration model calibrated on synthetic benchmark data (10,000 policyholders, ~23% empirical claim rate). Estimates individual claim event occurrence probability; does not determine loss severity, settlement cost, or fraud status. Not certified for actuarial rate-making or automated adverse decisions.
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Core Script -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

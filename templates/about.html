@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}About • Insurance Claim Prediction & Risk Analysis{% endblock %}
+{% block page_title %}Project Architecture & Methodology{% endblock %}
+{% block page_subtitle %}Academic documentation, machine learning methodology, and ethical considerations{% endblock %}
+
+{% block content %}
+<div class="grid-cols-2">
+    <!-- Section 1: Project Objective & Problem Statement -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>1. Core Objective & Scope</h3>
+                <p>Major Academic Capstone Project</p>
+            </div>
+        </div>
+        <p style="font-size: 0.92rem; color: var(--text-main); margin-bottom: 1rem; line-height: 1.6;">
+            The <strong>Insurance Claim Prediction & Risk Analysis System</strong> is an end-to-end decision-support prototype 
+            designed to evaluate policyholder underwriting profiles and estimate the likelihood of an insurance claim 
+            occurring within an annual policy term.
+        </p>
+        <div class="clay-card-inset" style="margin-bottom: 1rem;">
+            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.35rem;">
+                Key Conceptual Distinctions:
+            </h4>
+            <ul style="font-size: 0.85rem; color: var(--text-muted); margin-left: 1.25rem; line-height: 1.5;">
+                <li><strong>Probability vs. Severity:</strong> The system models event occurrence likelihood, not monetary payout amounts or loss reserve valuations.</li>
+                <li><strong>Claim Occurrence vs. Fraud:</strong> A predicted claim reflects genuine insured risk, not fraudulent intent or deceptive behavior.</li>
+                <li><strong>Decision Support vs. Actuarial Rate-Making:</strong> Risk tiers are illustrative application boundaries and do not constitute certified actuarial calculations.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Section 2: Technology Stack -->
+    <div class="clay-card">
+        <div class="section-header">
+            <div>
+                <h3>2. Full-Stack Architecture</h3>
+                <p>Monolithic single-service Python implementation</p>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; font-size: 0.85rem;">
+            <div class="clay-card-inset">
+                <strong>Backend:</strong>
+                <p style="color: var(--text-muted); margin-top: 0.2rem;">Python 3, Flask, Jinja2 Templates</p>
+            </div>
+            <div class="clay-card-inset">
+                <strong>Machine Learning:</strong>
+                <p style="color: var(--text-muted); margin-top: 0.2rem;">Scikit-learn, Pandas, NumPy, Joblib</p>
+            </div>
+            <div class="clay-card-inset">
+                <strong>UI & Design:</strong>
+                <p style="color: var(--text-muted); margin-top: 0.2rem;">Claymorphism CSS3, Vanilla JS, Chart.js</p>
+            </div>
+            <div class="clay-card-inset">
+                <strong>Data Persistence:</strong>
+                <p style="color: var(--text-muted); margin-top: 0.2rem;">SQLite3 with Parameterized Queries</p>
+            </div>
+            <div class="clay-card-inset" style="grid-column: span 2;">
+                <strong>Deployment:</strong>
+                <p style="color: var(--text-muted); margin-top: 0.2rem;">Render Web Service with Gunicorn WSGI Server</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 3: Machine Learning Pipeline -->
+<div class="clay-card" style="margin-bottom: 2rem;">
+    <div class="section-header">
+        <div>
+            <h3>3. Machine Learning Methodology</h3>
+            <p>Preprocessing, candidate modeling, and evaluation</p>
+        </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; font-size: 0.88rem; line-height: 1.5;">
+        <div class="clay-card-inset">
+            <h4 style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.4rem;">Data Leakage Prevention</h4>
+            <p style="color: var(--text-muted);">
+                Post-incident variables (such as repair costs, claim status, or settlement identifiers) are strictly pruned from training data. 
+                All transformers (scalers and encoders) are fitted strictly on the 80% training split.
+            </p>
+        </div>
+        <div class="clay-card-inset">
+            <h4 style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.4rem;">Class Imbalance Handling</h4>
+            <p style="color: var(--text-muted);">
+                Insurance claim data naturally exhibits heavy skew (~20% claims). Rather than optimizing for deceptive raw accuracy, 
+                models utilize balanced class weights and are benchmarked on ROC-AUC, Recall, and F1-Score.
+            </p>
+        </div>
+        <div class="clay-card-inset">
+            <h4 style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.4rem;">Model Interpretability</h4>
+            <p style="color: var(--text-muted);">
+                Individual predictions are complemented with local feature impact analysis. For Logistic Regression, log-odds contributions 
+                indicate whether specific factors (such as annual mileage or credit score) pushed risk higher or lower.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Section 4: Ethical Considerations & Limitations -->
+<div class="clay-card">
+    <div class="section-header">
+        <div>
+            <h3>4. Ethical Underwriting & System Limitations</h3>
+            <p>Guidelines for responsible AI decision-support in financial services</p>
+        </div>
+    </div>
+    <div class="clay-alert clay-alert-warning" style="margin-bottom: 1rem;">
+        <div>
+            <strong>Correlation vs. Causality:</strong> A statistical correlation between a policyholder attribute (e.g., credit rating or age) 
+            and claim incidence does not prove direct causation. Models should never be used as sole automated decision-makers without human underwriting oversight.
+        </div>
+    </div>
+    <p style="font-size: 0.9rem; color: var(--text-main); line-height: 1.6;">
+        Automated decision tools in insurance must comply with non-discrimination laws and fair lending guidelines. Underwriters must ensure that 
+        protected demographic characteristics do not produce disparate impact or penalize historically marginalized groups.
+    </p>
+</div>
+{% endblock %}
